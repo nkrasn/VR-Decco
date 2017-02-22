@@ -29,6 +29,6 @@ sysinfo.txt
 *.apk
 *.unitypackage
 
-# For hiding any private models
+# For hiding any private files (such as models)
 _Private/
 _Private.meta
