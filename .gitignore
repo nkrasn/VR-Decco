@@ -28,3 +28,7 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+
+# For hiding any private models
+_Private/
+_Private.meta
