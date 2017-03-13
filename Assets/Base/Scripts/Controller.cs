@@ -7,34 +7,34 @@ public class Controller : MonoBehaviour
     public SteamVR_TrackedObject.EIndex deviceID;
     public float rotateSensitivity = 20f;
 
-    private SteamVR_TrackedObject trackedObj;
+    public SteamVR_TrackedObject trackedObj { get; private set; }
     public SteamVR_Controller.Device device { get; private set; }
-    private LaserPointer laserPointer;
-    private TeleportVive teleporter;
+    public LaserPointer laserPointer { get; private set; }
+    public TeleportVive teleporter { get; private set; }
 
     private Grabbable _item;
     public Grabbable item { get; set; }
-    private FixedJoint joint;
+    public FixedJoint joint { get; private set; }
 
-    private bool insideGrabbable;
+    public bool insideGrabbable { get; private set; }
 
-    private ViveInput input;
+    public ViveInput input { get; private set; }
 
     // States
-    private enum State
-    {
-        Idle, Grabbing,
-        Teleporting
-    }
-    private bool switchedStates;
+    public StateIdle stateIdle { get; private set; }
+    public StateGrabbing stateGrabbing { get; private set; }
+    public StateTeleporting stateTeleporting { get; private set; }
+
     private State _currentState;
-    private State currentState
+    public State currentState
     {
         get { return _currentState; }
         set
         {
-            switchedStates = true;
+            if(_currentState != null)
+                _currentState.exit();
             _currentState = value;
+            _currentState.enter();
             Debug.Log(_currentState);
         }
     }
@@ -50,7 +50,11 @@ public class Controller : MonoBehaviour
 
         input = new ViveInput();
 
-        switchedStates = false;
+        // States
+        stateIdle = new StateIdle(this);
+        stateGrabbing = new StateGrabbing(this);
+        stateTeleporting = new StateTeleporting(this);
+        currentState = stateIdle;
 
         // Hand needs a rigidbody for joints
         Rigidbody r = gameObject.AddComponent<Rigidbody>();
@@ -66,6 +70,27 @@ public class Controller : MonoBehaviour
         sc.isTrigger = true;
 	}
 
+    void Update()
+    {
+        if(input == null)
+            input = new ViveInput();
+        if(currentState == null)
+            currentState = stateIdle;
+
+        // Don't proceed unless the controller is set up
+        if(deviceID != trackedObj.index || !trackedObj.isValid)
+        {
+            deviceID = trackedObj.index;
+            device = SteamVR_Controller.Input((int) trackedObj.index);
+            input.device = device;
+            return;
+        }
+        
+        input.updateInput();
+        currentState.update();
+    }
+
+
 
     private void OnTriggerEnter(Collider other)
     {
@@ -73,7 +98,7 @@ public class Controller : MonoBehaviour
 
         if(otherItem != null)
         {
-            if(currentState == State.Idle || (currentState == State.Grabbing && otherItem == item && laserPointer.currentDistance == 0f))
+            if(currentState == stateIdle || (currentState == stateGrabbing && otherItem == item && laserPointer.currentDistance == 0f))
             {
                 insideGrabbable = true;
                 item = other.gameObject.GetComponent<Grabbable>();
@@ -88,7 +113,7 @@ public class Controller : MonoBehaviour
         if(otherItem != null)
         {
             insideGrabbable = false;
-            if(currentState != State.Grabbing)
+            if(currentState != stateGrabbing)
                 item = null;
         }
     }
@@ -105,7 +130,7 @@ public class Controller : MonoBehaviour
     }
 
     // Activate/deactive the laser pointer
-    private void hideLaserPointer(bool hide)
+    public void hideLaserPointer(bool hide)
     {
         if(hide)
         {
@@ -119,7 +144,7 @@ public class Controller : MonoBehaviour
         }
     }
 
-    private void grab(bool asHand)
+    public void grab(bool asHand)
     {
         // Release the other hand if it's grabbing
         if(item.grabbingHand != this)
@@ -134,7 +159,7 @@ public class Controller : MonoBehaviour
         joint.connectedBody = item.GetComponent<Rigidbody>();
         setCollision(false);
 
-        currentState = State.Grabbing;
+        currentState = stateGrabbing;
     }
 
     public void release()
@@ -155,188 +180,6 @@ public class Controller : MonoBehaviour
         itemRb.velocity = device.velocity * flingMultiplier;
         itemRb.angularVelocity = device.angularVelocity;
 
-        currentState = State.Idle;
-    }
-
-
-
-    void Update()
-    {
-        if(input == null)
-            input = new ViveInput();
-
-        // Don't proceed unless the controller is set up
-        if(deviceID != trackedObj.index || !trackedObj.isValid)
-        {
-            deviceID = trackedObj.index;
-            device = SteamVR_Controller.Input((int) trackedObj.index);
-            input.device = device;
-            return;
-        }
-
-        input.updateInput();
-        
-        // Do appropriate behavior for the current state
-        switch(currentState)
-        {
-            case State.Idle:
-                // Executed when you first enter the state
-                if(switchedStates)
-                {
-                    hideLaserPointer(false);
-                    if(teleporter.disabledController == trackedObj)
-                        teleporter.disabledController = null;
-                    switchedStates = false;
-                }
-
-                // Unable to grab with hands, see if pointer hit something
-                if(!insideGrabbable)
-                {
-                    RaycastHit hit;
-                    item = null;
-                    if(Physics.Raycast(transform.position, transform.forward, out hit, laserPointer.maxDistance))
-                    {
-                        laserPointer.currentDistance = hit.distance;
-                        laserPointer.setMaterial("hit");
-
-                        item = hit.transform.gameObject.GetComponent<Grabbable>();
-
-                        // Get the position of the item origin relative to the hit point (for item rotation)
-                        if(item != null)
-                        {
-                            laserPointer.itemOffset = hit.point - item.transform.position;
-                        }
-                    }
-                    // Nothing hit, laser distance = max
-                    if(item == null)
-                    {
-                        laserPointer.currentDistance = laserPointer.maxDistance;
-                        laserPointer.setMaterial("idle");
-                    }
-                }
-                else
-                {
-                    laserPointer.currentDistance = 0f;
-                }
-
-                // Duplicate the item (temporary)
-                if(item != null && input.gripPressed)
-                {
-                    GameObject dupe = Instantiate(item.gameObject);
-                    Vector3 newPos = dupe.transform.position;
-                    newPos.y += dupe.GetComponent<BoxCollider>().bounds.extents.y * 2f + 0.25f;
-                    dupe.transform.position = newPos;
-                }
-
-                // Grab the item
-                if(item != null && input.triggerPressed)
-                {
-                    grab(insideGrabbable);
-                    break;
-                }
-                
-                // Teleporting, don't grab or do anything else
-                if(teleporter.disabledController == null && input.touchpadHeld)
-                {
-                    currentState = State.Teleporting;
-                    break;
-                }
-
-                break;
-            case State.Grabbing:
-                if(switchedStates)
-                {
-                    teleporter.disabledController = trackedObj;
-                    laserPointer.setMaterial("grab");
-                    switchedStates = false;
-                }
-
-                // Holding the item with lasers
-                if(!insideGrabbable)
-                {
-                    // Keep item frozen when not gripping
-                    item.GetComponent<Rigidbody>().freezeRotation = !input.touchpadHeld;
-                    
-                    // Scrolling
-                    if(input.touchpad.getScrollY() != 0f && Mathf.Abs(input.touchpad.getScrollY()) > Mathf.Abs(input.touchpad.getScrollX()))
-                    {
-                        joint.connectedBody = null;
-                        
-                        // Resize the pointer and keep track of the size change
-                        float prevPointerDistance = laserPointer.currentDistance;
-                        laserPointer.currentDistance += Mathf.Sign(input.touchpad.getScrollY()) * Mathf.Pow(input.touchpad.getScrollY() * 3, 2);
-                        //Mathf.Lerp(0, input.touchpad.getScrollY(), 0.5f);
-                        float currPointerDistance = laserPointer.currentDistance;
-
-                        // Move the item by the amount the pointer was resized
-                        Vector3 shiftVector = transform.forward * (currPointerDistance - prevPointerDistance);
-
-                        item.transform.position += shiftVector;
-                        joint.connectedBody = item.GetComponent<Rigidbody>();
-                    }
-
-                    // Rotating
-                    if(input.touchpad.getScrollX() != 0f && Mathf.Abs(input.touchpad.getScrollY()) <= Mathf.Abs(input.touchpad.getScrollX()))
-                    {
-                        Vector3 rotatePoint = transform.position + transform.forward * laserPointer.currentDistance;
-                        joint.connectedBody = null;
-
-                        item.transform.RotateAround(rotatePoint, Vector3.up, -input.touchpad.getScrollX() * rotateSensitivity);
-
-                        joint.connectedBody = item.GetComponent<Rigidbody>();
-                    }
-
-                    // When ungripped, get the new item origin relative to hit point
-                    if(input.touchpadReleased)
-                    {
-                        RaycastHit hit;
-                        bool hitSomething = false;
-                        if(Physics.Raycast(transform.position, transform.forward, out hit, laserPointer.maxDistance))
-                        {
-                            hitSomething = true;
-                            if(hit.transform.gameObject.GetComponent<Grabbable>() == item)
-                            {
-                                laserPointer.currentDistance = hit.distance;
-                                laserPointer.itemOffset = hit.point - item.transform.position;
-                            }
-                        }
-                        if(hitSomething && hit.transform.gameObject.GetComponent<Grabbable>() != item)
-                        {
-                            laserPointer.currentDistance = 0f;
-                            laserPointer.itemOffset = transform.position - item.transform.position;
-                        }
-                    }
-
-                    // No grip = item rotation relative to world
-                    if(!input.touchpadHeld)
-                    {
-                        // Make the item's rotation stay relative to the world
-                        joint.connectedBody = null;
-                        item.transform.position = transform.position + transform.forward * laserPointer.currentDistance - laserPointer.itemOffset;
-                        joint.connectedBody = item.GetComponent<Rigidbody>();
-                    }
-                }
-
-                if(!input.triggerHeld)
-                {
-                    release();
-                    break;
-                }
-
-                break;
-            case State.Teleporting:
-                if(switchedStates)
-                {
-                    hideLaserPointer(true);
-                    switchedStates = false;
-                }
-
-                if(!input.touchpadHeld)
-                {
-                    currentState = State.Idle;
-                    break;
-                }
-                break;
-        }
+        currentState = stateIdle;
     }
 }
