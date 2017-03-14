@@ -7,3 +7,5 @@ On the to-do list:
 - Material picker/creator
 - Item spawning
 - Ability to import custom models
+- Ruler
+- Mesh editing
