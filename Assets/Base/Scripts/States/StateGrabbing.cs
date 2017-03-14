@@ -83,6 +83,7 @@ public class StateGrabbing : State
         if(!c.input.triggerHeld)
         {
             c.release();
+            return;
         }
     }
 

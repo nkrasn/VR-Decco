@@ -34,7 +34,27 @@ public class Grabbable : MonoBehaviour
 
                 if(physicMaterial != null)
                     solidBox.material = physicMaterial;
+            break;
+        }
+        recalculateBounds();
 
+        // Make sure the item is in the item hierarchy
+        if(transform.parent == null || transform.parent.tag != "ItemHierarchy")
+        {
+            transform.SetParent(GameObject.FindGameObjectWithTag("ItemHierarchy").transform);
+        }
+	}
+
+    void Update()
+    {
+
+    }
+
+    public void recalculateBounds()
+    {
+        switch(collisionShape)
+        {
+            case CollisionShape.Box:
                 // Calculate the size of the boxes
                 solidBox.size = GetComponent<MeshFilter>().sharedMesh.bounds.extents * 2f;
                 foreach(Transform t in transform)
@@ -103,19 +123,8 @@ public class Grabbable : MonoBehaviour
                 triggerBox.size = solidBox.size;
                 break;
             case CollisionShape.Sphere:
-                
+
                 break;
         }
-
-        // Make sure the item is in the item hierarchy
-        if(transform.parent == null || transform.parent.tag != "ItemHierarchy")
-        {
-            transform.SetParent(GameObject.FindGameObjectWithTag("ItemHierarchy").transform);
-        }
-	}
-
-    void Update()
-    {
-
     }
 }

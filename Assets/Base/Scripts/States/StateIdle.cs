@@ -59,12 +59,24 @@ public class StateIdle : State
         if(c.item != null && c.input.triggerPressed)
         {
             c.grab(c.insideGrabbable);
+            return;
         }
 
         // Teleporting, don't grab or do anything else
         if(c.teleporter.disabledController == null && c.input.touchpadHeld)
         {
             c.currentState = c.stateTeleporting;
+            return;
+        }
+
+        // Edit mode for meshes
+        if(c.input.menuPressed)
+        {
+            c.teleporter.disabledController = c.trackedObj;
+            c.hideLaserPointer(true);
+            c.editSphere.hideSphere(false);
+            c.currentState = c.stateEditIdle;
+            return;
         }
     }
 

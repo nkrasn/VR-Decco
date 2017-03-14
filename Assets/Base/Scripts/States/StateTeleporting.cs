@@ -16,6 +16,7 @@ public class StateTeleporting : State
         if(!c.input.touchpadHeld)
         {
             c.currentState = c.stateIdle;
+            return;
         }
     }
 

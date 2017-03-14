@@ -5,7 +5,7 @@ public class LaserPointer
 {
     private Controller controller;
 
-    public GameObject laser, laserHolder;
+    public GameObject laser, laserHolder, hitSphere;
     private Material idleMaterial, hitMaterial, grabMaterial;
 
     // Represents where the item is relative to the pointer's hit location
@@ -43,7 +43,6 @@ public class LaserPointer
     }
 
     private float laserThickness;
-    private GameObject hitSphere;
 
     public LaserPointer(Controller controller, float maxDistance)
     {

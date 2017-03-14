@@ -10,6 +10,7 @@ public class Controller : MonoBehaviour
     public SteamVR_TrackedObject trackedObj { get; private set; }
     public SteamVR_Controller.Device device { get; private set; }
     public LaserPointer laserPointer { get; private set; }
+    public EditSphere editSphere { get; private set; }
     public TeleportVive teleporter { get; private set; }
 
     private Grabbable _item;
@@ -24,6 +25,8 @@ public class Controller : MonoBehaviour
     public StateIdle stateIdle { get; private set; }
     public StateGrabbing stateGrabbing { get; private set; }
     public StateTeleporting stateTeleporting { get; private set; }
+    public StateEditIdle stateEditIdle { get; private set; }
+    public StateEditGrabbing stateEditGrabbing { get; private set; }
 
     private State _currentState;
     public State currentState
@@ -44,6 +47,7 @@ public class Controller : MonoBehaviour
         // Initialize variables
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         laserPointer = new LaserPointer(this, 100f);
+        editSphere = new EditSphere(this, new Vector3(0f, -0.05f, 0.1f));
         teleporter = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<TeleportVive>();
         
         insideGrabbable = false;
@@ -54,6 +58,8 @@ public class Controller : MonoBehaviour
         stateIdle = new StateIdle(this);
         stateGrabbing = new StateGrabbing(this);
         stateTeleporting = new StateTeleporting(this);
+        stateEditIdle = new StateEditIdle(this);
+        stateEditGrabbing = new StateEditGrabbing(this);
         currentState = stateIdle;
 
         // Hand needs a rigidbody for joints
