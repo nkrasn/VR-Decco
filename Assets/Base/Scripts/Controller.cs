@@ -6,10 +6,11 @@ public class Controller : MonoBehaviour
 {
     public SteamVR_TrackedObject.EIndex deviceID;
     public float rotateSensitivity = 20f;
-    public GameObject ruler; // quick solution, need to change this later
 
+    public ControllerManager controllerManager { get; set; }
     public SteamVR_TrackedObject trackedObj { get; private set; }
     public SteamVR_Controller.Device device { get; private set; }
+
     public LaserPointer laserPointer { get; private set; }
     public EditSphere editSphere { get; private set; }
     public TeleportVive teleporter { get; private set; }
@@ -46,9 +47,6 @@ public class Controller : MonoBehaviour
 
     void Start()
     {
-        ruler = Instantiate(ruler);
-        ruler.SetActive(false);
-
         // Initialize variables
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         laserPointer = new LaserPointer(this, 100f);

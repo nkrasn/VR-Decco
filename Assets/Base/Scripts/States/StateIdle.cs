@@ -85,11 +85,7 @@ public class StateIdle : State
         // Ruler
         if(c.input.menuPressed)
         {
-            c.teleporter.disabledController = c.trackedObj;
-            c.hideLaserPointer(true);
-            c.ruler.SetActive(true);
-            c.currentState = c.stateRuler;
-            return;
+            c.controllerManager.ruler.SetActive(!c.controllerManager.ruler.activeSelf);
         }
     }
 
