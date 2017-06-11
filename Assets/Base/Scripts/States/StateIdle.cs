@@ -69,13 +69,26 @@ public class StateIdle : State
             return;
         }
 
+        /*
         // Edit mode for meshes
+        // Will figure out later, possibly using compute shaders
         if(c.input.menuPressed)
         {
             c.teleporter.disabledController = c.trackedObj;
             c.hideLaserPointer(true);
             c.editSphere.hideSphere(false);
             c.currentState = c.stateEditIdle;
+            return;
+        }
+        */
+
+        // Ruler
+        if(c.input.menuPressed)
+        {
+            c.teleporter.disabledController = c.trackedObj;
+            c.hideLaserPointer(true);
+            c.ruler.SetActive(true);
+            c.currentState = c.stateRuler;
             return;
         }
     }

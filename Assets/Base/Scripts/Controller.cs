@@ -6,6 +6,7 @@ public class Controller : MonoBehaviour
 {
     public SteamVR_TrackedObject.EIndex deviceID;
     public float rotateSensitivity = 20f;
+    public GameObject ruler; // quick solution, need to change this later
 
     public SteamVR_TrackedObject trackedObj { get; private set; }
     public SteamVR_Controller.Device device { get; private set; }
@@ -27,6 +28,7 @@ public class Controller : MonoBehaviour
     public StateTeleporting stateTeleporting { get; private set; }
     public StateEditIdle stateEditIdle { get; private set; }
     public StateEditGrabbing stateEditGrabbing { get; private set; }
+    public StateRuler stateRuler { get; private set; }
 
     private State _currentState;
     public State currentState
@@ -44,6 +46,9 @@ public class Controller : MonoBehaviour
 
     void Start()
     {
+        ruler = Instantiate(ruler);
+        ruler.SetActive(false);
+
         // Initialize variables
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         laserPointer = new LaserPointer(this, 100f);
@@ -60,6 +65,7 @@ public class Controller : MonoBehaviour
         stateTeleporting = new StateTeleporting(this);
         stateEditIdle = new StateEditIdle(this);
         stateEditGrabbing = new StateEditGrabbing(this);
+        stateRuler = new StateRuler(this);
         currentState = stateIdle;
 
         // Hand needs a rigidbody for joints
